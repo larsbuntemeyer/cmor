@@ -557,6 +557,8 @@ static PyObject *PyCMOR_getincvalues(PyObject * self, PyObject * args)
         return (Py_BuildValue("s", CMOR_AXIS_ENTRY_FILE));
     } else if (strcmp(att_name, "CMOR_FORMULA_VAR_FILE") == 0) {
         return (Py_BuildValue("s", CMOR_FORMULA_VAR_FILE));
+    } else if (strcmp(att_name, "GLOBAL_IS_CMIP6") == 0) {
+        return (Py_BuildValue("s", GLOBAL_IS_CMIP6));
 
     } else {
         /* Return NULL Python Object */
