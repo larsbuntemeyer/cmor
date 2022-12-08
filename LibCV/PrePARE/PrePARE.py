@@ -233,6 +233,7 @@ class checkCMIP6(object):
     """
 
     def __init__(self, table_path):
+        print(table_path)
         # -------------------------------------------------------------------
         #  Reset CV error switch
         # -------------------------------------------------------------------
@@ -249,6 +250,7 @@ class checkCMIP6(object):
         # -------------------------------------------------------------------
         # call setup() to clean all 'C' internal memory.
         # -------------------------------------------------------------------
+        print('setup')
         cmip6_cv.setup(inpath="../Tables", exit_control=cmip6_cv.CMOR_EXIT_ON_WARNING)
         # -------------------------------------------------------------------
         # Set Control Vocabulary file to use (default from cmor.h)
@@ -271,6 +273,14 @@ class checkCMIP6(object):
         cmip6_cv.set_cur_dataset_attribute(
             cmip6_cv.CMOR_FORMULA_VAR_FILE,
             "CMIP6_formula_terms.json")
+        file_name_template = ("<variable_id><domain_id><driving_source_id>"
+                              "<driving_experiment_id><driving_variant_label>"
+                              "<institution_id><source_id><source_configuration_id>"
+                              "<table_id>")
+        cmip6_cv.set_cur_dataset_attribute(
+            cmip6_cv.FILE_NAME_TEMPLATE,
+            file_name_template)
+        print('created checker')
 
     def prepare_print(self, msg, code, no_text_color=False, lines=False):
         code_color = {
@@ -449,6 +459,7 @@ class checkCMIP6(object):
         # Create a dictionary of all global attributes
         # -------------------------------------------------------------------
         self.dictGbl = infile.__dict__
+        print(self.dictGbl)
         for key, value in list(self.dictGbl.items()):
             cmip6_cv.set_cur_dataset_attribute(key, value)
         # Set member_id attribute depending on sub_experiment_id and variant_label
@@ -488,8 +499,8 @@ class checkCMIP6(object):
             self.errors += 1
         if cmip6_cv.check_furtherinfourl(table) != 0:
             self.errors += 1
-        if cmip6_cv.check_subExpID(table) != 0:
-            self.errors += 1
+        #if cmip6_cv.check_subExpID(table) != 0:
+        #    self.errors += 1
         for attr in ['branch_time_in_child', 'branch_time_in_parent']:
             if attr in list(self.dictGbl.keys()):
                 self.set_double_value(attr)
@@ -507,8 +518,10 @@ class checkCMIP6(object):
                 msg = "{} attribute is missing in global attributes".format(attr)
                 self.prepare_print(msg, 'FAIL', no_text_color, lines=True)
                 self.errors += 1
-        if cmip6_cv.check_parentExpID(table) != 0:
-            self.errors += 1
+        print('table', table)
+        #print('check parentExpID', cmip6_cv.check_parentExpID(table))
+        #if cmip6_cv.check_parentExpID(table) != 0:
+        #    self.errors += 1
         for attr in ['table_id', 'variable_id']:
             try:
                 if locals()[attr] != self.dictGbl[attr]:
@@ -678,8 +691,11 @@ class checkCMIP6(object):
 def process(source):
     # Redirect all print statements to a logfile dedicated to the current
     # process
+    print('running source', source)
     logfile = '/tmp/PrePARE-{}.log'.format(os.getpid())
+    print(logfile)
     with RedirectedOutput(logfile):
+        print('sequential_process calling')
         rc = sequential_process(source)
     # Close and return logfile
     return logfile, rc
@@ -868,6 +884,7 @@ def main():
         return 1
     except SystemExit:
         return 1
+    print('running')
     # Get log
     logname = 'PrePARE-{}.log'.format(datetime.now().strftime("%Y%m%d-%H%M%S"))
     log = None
@@ -877,6 +894,7 @@ def main():
         log = os.path.join(args.log, logname)
     # Collects netCDF files for process
     sources = Collector(args.input)
+    print(sources)
     # Set scan filters
     file_filters = list()
     if args.include_file:
@@ -902,6 +920,7 @@ def main():
     cctx['table_path'] = args.table_path
     cctx['variable'] = args.variable
     cctx['all'] = args.all
+    print("start processing")
     # Separate sequential process and multiprocessing
     if args.max_processes != 1:
         # Create pool of processes
@@ -948,12 +967,15 @@ def main():
     else:
         print('Checking data, please wait...')
         initializer(list(cctx.keys()), list(cctx.values()))
+        print('initialize done...')
         # Print results from logfiles and remove them
         # If --no-text-color is used, then remove the ANSI escape codes from the log output
         remove_ansi = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
         for source in sources:
+            print(source)
             logfile, rc = process(source)
             errors += rc
+            print('done')
             if not os.stat(logfile).st_size == 0:
                 with open(logfile, 'r', encoding='utf8', errors='ignore') as f:
                     log_text = f.read()
